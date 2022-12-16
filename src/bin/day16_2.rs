@@ -108,77 +108,76 @@ fn get_neighbour_distances(graph: &Graph, vertex: VertexId) -> HashMap<VertexId,
 
 fn get_complete_graph(graph: &Graph, initial_vertex: VertexId) -> WeightedGraph {
     let vertices = graph.vertices.iter()
-    .filter(|&(k, v)| v.flow_rate > 0 || *k == initial_vertex)
-    .map(|(k, v)| {
-        let distances = get_neighbour_distances(graph, *k);
+    .filter(|&(&k, v)| v.flow_rate > 0 || k == initial_vertex)
+    .map(|(&k, v)| {
+        let distances = get_neighbour_distances(graph, k);
         let vertex = WeightedVertex {
             flow_rate: v.flow_rate,
             // Takes 1 minute to activate the thing so +1 on top of travel distance
             neighbours: graph.vertices
                 .iter()
-                .filter(|&(k, v)| v.flow_rate > 0 || *k == initial_vertex)
-                .map(|(k, _)| (k.clone(), distances[k] + 1))
+                .filter(|&(_, v)| v.flow_rate > 0)
+                .map(|(k, _)| (*k, distances[k] + 1))
                 .collect(),
         };
-        (k.clone(), vertex)
+        (k, vertex)
     });
 
     WeightedGraph { vertices: vertices.collect() }
 }
 
-fn get_successors_complete(graph: &WeightedGraph, e: &Entry) -> Vec<Entry> {
+fn get_successors_complete(graph: &WeightedGraph, state: &State) -> Vec<Entry> {
     let mut vec = Vec::new();
 
-    let me_current_vertex = &graph.vertices[&e.state.me.current_vertex];
-    let elephant_current_vertex = &graph.vertices[&e.state.elephant.current_vertex];
-
+    let me_current_vertex = &graph.vertices[&state.me.current_vertex];
+    let elephant_current_vertex = &graph.vertices[&state.elephant.current_vertex];
 
     // new states if i move
     for (neighbour, cost) in &me_current_vertex.neighbours {
-        if e.state.activated_vertices.contains(neighbour) {
+        if state.activated_vertices.contains(neighbour) {
             continue;
         }
         let neighbour_vertex = &graph.vertices[neighbour];
 
-        let new_minutes_remaining = e.state.me.minutes_remaining - cost;
+        let new_minutes_remaining = state.me.minutes_remaining - cost;
         if new_minutes_remaining <= 0 {
             continue;
         }
-        let mut new_activated_vertices = e.state.activated_vertices.clone();
-        new_activated_vertices.insert(neighbour.clone());
+        let mut new_activated_vertices = state.activated_vertices.clone();
+        new_activated_vertices.insert(*neighbour);
         vec.push(Entry {
-            score: e.score + (neighbour_vertex.flow_rate * new_minutes_remaining),
+            score: neighbour_vertex.flow_rate * new_minutes_remaining,
             state: State {
                 activated_vertices: new_activated_vertices,
                 me: ActorState {
-                    current_vertex: neighbour.clone(),
+                    current_vertex: *neighbour,
                     minutes_remaining: new_minutes_remaining
                 },
-                elephant: e.state.elephant.clone(),
+                elephant: state.elephant.clone(),
             }
         })
     }
 
     // new states if elephant moves
     for (neighbour, cost) in &elephant_current_vertex.neighbours {
-        if e.state.activated_vertices.contains(neighbour) {
+        if state.activated_vertices.contains(neighbour) {
             continue;
         }
         let neighbour_vertex = &graph.vertices[neighbour];
 
-        let new_minutes_remaining = e.state.elephant.minutes_remaining - cost;
+        let new_minutes_remaining = state.elephant.minutes_remaining - cost;
         if new_minutes_remaining <= 0 {
             continue;
         }
-        let mut new_activated_vertices = e.state.activated_vertices.clone();
-        new_activated_vertices.insert(neighbour.clone());
+        let mut new_activated_vertices = state.activated_vertices.clone();
+        new_activated_vertices.insert(*neighbour);
         vec.push(Entry {
-            score: e.score + (neighbour_vertex.flow_rate * new_minutes_remaining),
+            score: neighbour_vertex.flow_rate * new_minutes_remaining,
             state: State {
                 activated_vertices: new_activated_vertices,
-                me: e.state.me.clone(),
+                me: state.me.clone(),
                 elephant: ActorState {
-                    current_vertex: neighbour.clone(),
+                    current_vertex: *neighbour,
                     minutes_remaining: new_minutes_remaining,
                 },
             }
@@ -241,7 +240,7 @@ fn find_best_score_rec(graph: &WeightedGraph, initial_state: &State, lookup: &mu
         return *score;
     }
 
-    let mut successors = get_successors_complete(graph, &Entry {score: 0, state: initial_state.clone() });
+    let mut successors = get_successors_complete(graph, initial_state);
     successors.sort_by_key(|x| x.score);
 
     let mut best_score = 0;
