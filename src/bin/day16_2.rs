@@ -11,16 +11,16 @@ fn main() {
     let graph_lines = lines.map(|x| parse_graph_line(&x.unwrap()));
     let graph = parse_graph(graph_lines);
 
-    let complete_graph = get_complete_graph(&graph, "AA");
+    let complete_graph = get_complete_graph(&graph, decode_vertex_name("AA"));
 
     let best_score = find_best_score_rec_wrapper(&complete_graph, &State {
         activated_vertices: BTreeSet::new(),
         me: ActorState{
-            current_vertex: "AA".to_string(),
+            current_vertex: decode_vertex_name("AA"),
             minutes_remaining: 26,
         },
         elephant: ActorState{
-            current_vertex: "AA".to_string(),
+            current_vertex: decode_vertex_name("AA"),
             minutes_remaining: 26,
         },
     });
@@ -31,12 +31,12 @@ fn main() {
 #[derive(Debug)]
 struct Vertex {
     flow_rate: i32,
-    neighbours: Vec<String>,
+    neighbours: Vec<VertexId>,
 }
 
 #[derive(Debug)]
 struct Graph {
-    vertices: HashMap<String, Vertex>,
+    vertices: HashMap<VertexId, Vertex>,
 }
 
 #[derive(Debug)]
@@ -48,7 +48,7 @@ struct GraphLine {
 
 #[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord, Hash)]
 struct ActorState {
-    current_vertex: String,
+    current_vertex: VertexId,
     minutes_remaining: i32,
 }
 
@@ -56,7 +56,7 @@ struct ActorState {
 struct State {
     me: ActorState,
     elephant: ActorState,
-    activated_vertices: BTreeSet<String>,
+    activated_vertices: BTreeSet<VertexId>,
 }
 
 #[derive(Debug)]
@@ -68,45 +68,55 @@ struct Entry {
 #[derive(Debug)]
 struct WeightedVertex {
     flow_rate: i32,
-    neighbours: Vec<(String, i32)>,
+    neighbours: Vec<(VertexId, i32)>,
 }
 
 #[derive(Debug)]
 struct WeightedGraph {
-    vertices: HashMap<String, WeightedVertex>,
+    vertices: HashMap<VertexId, WeightedVertex>,
 }
 
-fn get_neighbour_distances(graph: &Graph, vertex: &str) -> HashMap<String, i32> {
-    let mut visited = HashMap::<String, i32>::new();
-    let mut queue = VecDeque::<(i32, String)>::new();
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord)]
+struct VertexId(i32);
 
-    queue.push_back((0, vertex.to_string()));
+fn decode_vertex_name(name: &str) -> VertexId {
+    let bytes = name.as_bytes();
+    let first = i32::from(bytes[0] - b'A');
+    let second = i32::from(bytes[1] - b'A');
+    VertexId((first * 26) + second)
+}
+
+fn get_neighbour_distances(graph: &Graph, vertex: VertexId) -> HashMap<VertexId, i32> {
+    let mut visited = HashMap::<VertexId, i32>::new();
+    let mut queue = VecDeque::<(i32, VertexId)>::new();
+
+    queue.push_back((0, vertex));
     
     while let Some((cost, vert)) = queue.pop_front() {
-        visited.insert(vert.clone(), cost);
+        visited.insert(vert, cost);
 
         for succ in &graph.vertices[&vert].neighbours {
             if visited.contains_key(succ) {
                 continue;
             }
-            queue.push_back((cost+1, succ.clone()));
+            queue.push_back((cost+1, *succ));
         }
     }
 
     visited
 }
 
-fn get_complete_graph(graph: &Graph, initial_vertex: &str) -> WeightedGraph {
+fn get_complete_graph(graph: &Graph, initial_vertex: VertexId) -> WeightedGraph {
     let vertices = graph.vertices.iter()
-    .filter(|&(k, v)| v.flow_rate > 0 || k == initial_vertex)
+    .filter(|&(k, v)| v.flow_rate > 0 || *k == initial_vertex)
     .map(|(k, v)| {
-        let distances = get_neighbour_distances(graph, k);
+        let distances = get_neighbour_distances(graph, *k);
         let vertex = WeightedVertex {
             flow_rate: v.flow_rate,
             // Takes 1 minute to activate the thing so +1 on top of travel distance
             neighbours: graph.vertices
                 .iter()
-                .filter(|&(k, v)| v.flow_rate > 0 || k == initial_vertex)
+                .filter(|&(k, v)| v.flow_rate > 0 || *k == initial_vertex)
                 .map(|(k, _)| (k.clone(), distances[k] + 1))
                 .collect(),
         };
@@ -253,7 +263,12 @@ fn find_best_score_rec(graph: &WeightedGraph, initial_state: &State, lookup: &mu
 fn parse_graph<T: Iterator<Item=GraphLine>>(lines: T) -> Graph {
     let mut m = HashMap::new();
     for line in lines {
-        m.insert(line.name, Vertex{flow_rate: line.flow_rate, neighbours: line.neighbours});
+        m.insert(
+            decode_vertex_name(&line.name),
+            Vertex{
+                flow_rate: line.flow_rate,
+                neighbours: line.neighbours.iter().map(|x| decode_vertex_name(x)).collect()
+            });
     }
     Graph { vertices: m }
 }
