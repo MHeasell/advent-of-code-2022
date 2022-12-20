@@ -1,10 +1,10 @@
-use std::{fs::File, io::{BufReader, BufRead}, collections::VecDeque};
+use std::{fs::File, io::{BufReader, BufRead}};
 
 fn main() {
     let file = File::open("data/day20/input.txt").unwrap();
     let reader = BufReader::new(file);
     let lines = reader.lines();
-    let mut numbers = lines.map(|x| x.unwrap().parse::<i64>().unwrap()).enumerate().collect::<VecDeque<_>>();
+    let mut numbers = lines.map(|x| x.unwrap().parse::<i64>().unwrap()).enumerate().collect::<Vec<_>>();
 
     let decryption_key = 811589153;
 
@@ -27,7 +27,7 @@ fn main() {
     println!("sum: {}", sum);
 }
 
-fn mix(numbers: &mut VecDeque<(usize, i64)>, numbers_index: &mut [usize]) {
+fn mix(numbers: &mut [(usize, i64)], numbers_index: &mut [usize]) {
     for numbers_index_pos in 0..numbers_index.len() {
         let idx_of_num_to_move = numbers_index[numbers_index_pos];
 
@@ -36,7 +36,7 @@ fn mix(numbers: &mut VecDeque<(usize, i64)>, numbers_index: &mut [usize]) {
     }
 }
 
-fn move_thing(numbers: &mut VecDeque<(usize, i64)>, idx: usize, mut places: i64, numbers_index: &mut [usize]) {
+fn move_thing(numbers: &mut [(usize, i64)], idx: usize, mut places: i64, numbers_index: &mut [usize]) {
     let len = numbers.len();
 
     // Moving by (len-1) places is equivalent to a list rotation.
@@ -68,7 +68,7 @@ fn wrap_to_range(val: i64, range: i64) -> i64 {
     val % range
 }
 
-fn fancy_swap(numbers: &mut VecDeque<(usize, i64)>, idx_a: usize, idx_b: usize, numbers_index: &mut [usize]) {
+fn fancy_swap(numbers: &mut [(usize, i64)], idx_a: usize, idx_b: usize, numbers_index: &mut [usize]) {
     let v_a = numbers[idx_a];
     let v_b = numbers[idx_b];
     numbers.swap(idx_a, idx_b);
@@ -90,73 +90,73 @@ mod tests {
 
     #[test]
     fn test_mix() {
-        let mut v = VecDeque::from_iter([1,2,-3,3,-2,0,4].into_iter().enumerate());
+        let mut v = Vec::from_iter([1,2,-3,3,-2,0,4].into_iter().enumerate());
         let mut index = vec![0,1,2,3,4,5,6];
         mix(&mut v, &mut index);
-        assert_eq!(v.into_iter().map(|x| x.1).collect::<VecDeque<_>>(), VecDeque::from([-2,1,2,-3,4,0,3]));
+        assert_eq!(v.into_iter().map(|x| x.1).collect::<Vec<_>>(), vec![-2,1,2,-3,4,0,3]);
         assert_eq!(index, vec![1, 2, 3, 6, 0, 5, 4]);
     }
 
     #[test]
     fn test_move_thing_forward() {
-        let mut v = VecDeque::from_iter([1,2,3,4,5].into_iter().enumerate());
+        let mut v = Vec::from_iter([1,2,3,4,5].into_iter().enumerate());
         let mut index = vec![0,1,2,3,4];
         move_thing(&mut v, 3, 1, &mut index);
-        assert_eq!(v, VecDeque::from([(0,1),(1,2),(2,3),(4,5),(3,4)]));
+        assert_eq!(v, vec![(0,1),(1,2),(2,3),(4,5),(3,4)]);
         assert_eq!(index, vec![0,1,2,4,3]);
     }
 
     #[test]
     fn test_move_thing_zero() {
-        let mut v = VecDeque::from_iter([1,2,3,4,5].into_iter().enumerate());
+        let mut v = Vec::from_iter([1,2,3,4,5].into_iter().enumerate());
         let mut index = vec![0,1,2,3,4];
         move_thing(&mut v, 2, 0, &mut index);
-        assert_eq!(v, VecDeque::from([(0,1),(1,2),(2,3),(3,4),(4,5)]));
+        assert_eq!(v, vec![(0,1),(1,2),(2,3),(3,4),(4,5)]);
         assert_eq!(index, vec![0,1,2,3,4]);
     }
 
     #[test]
     fn test_move_thing_backward() {
-        let mut v = VecDeque::from_iter([1,2,3,4,5].into_iter().enumerate());
+        let mut v = Vec::from_iter([1,2,3,4,5].into_iter().enumerate());
         let mut index = vec![0,1,2,3,4];
         move_thing(&mut v, 3, -1, &mut index);
-        assert_eq!(v, VecDeque::from([(0,1),(1,2),(3,4),(2,3),(4,5)]));
+        assert_eq!(v, vec![(0,1),(1,2),(3,4),(2,3),(4,5)]);
         assert_eq!(index, vec![0,1,3,2,4]);
     }
 
     #[test]
     fn test_move_thing_forward_wrap() {
-        let mut v = VecDeque::from_iter([1,2,3,4,5].into_iter().enumerate());
+        let mut v = Vec::from_iter([1,2,3,4,5].into_iter().enumerate());
         let mut index = vec![0,1,2,3,4];
         move_thing(&mut v, 4, 1, &mut index);
-        assert_eq!(v, VecDeque::from([(4,5),(1,2),(2,3),(3,4),(0,1)]));
+        assert_eq!(v, vec![(4,5),(1,2),(2,3),(3,4),(0,1)]);
         assert_eq!(index, vec![4,1,2,3,0]);
     }
 
     #[test]
     fn test_move_thing_backward_wrap() {
-        let mut v = VecDeque::from_iter([1,2,3,4,5].into_iter().enumerate());
+        let mut v = Vec::from_iter([1,2,3,4,5].into_iter().enumerate());
         let mut index = vec![0,1,2,3,4];
         move_thing(&mut v, 0, -1, &mut index);
-        assert_eq!(v, VecDeque::from([(4,5),(1,2),(2,3),(3,4),(0,1)]));
+        assert_eq!(v, vec![(4,5),(1,2),(2,3),(3,4),(0,1)]);
         assert_eq!(index, vec![4,1,2,3,0]);
     }
 
     #[test]
     fn test_move_thing_forward_overwrap() {
-        let mut v = VecDeque::from_iter([1,2,3,4,5].into_iter().enumerate());
+        let mut v = Vec::from_iter([1,2,3,4,5].into_iter().enumerate());
         let mut index = vec![0,1,2,3,4];
         move_thing(&mut v, 1, 5, &mut index);
-        assert_eq!(v, VecDeque::from([(0,1),(2,3),(1,2),(3,4),(4,5)]));
+        assert_eq!(v, vec![(0,1),(2,3),(1,2),(3,4),(4,5)]);
         assert_eq!(index, vec![0,2,1,3,4]);
     }
 
     #[test]
     fn test_move_thing_backward_overwrap() {
-        let mut v = VecDeque::from_iter([1,2,3,4,5].into_iter().enumerate());
+        let mut v = Vec::from_iter([1,2,3,4,5].into_iter().enumerate());
         let mut index = vec![0,1,2,3,4];
         move_thing(&mut v, 3, -5, &mut index);
-        assert_eq!(v, VecDeque::from([(0,1),(1,2),(3,4),(2,3),(4,5)]));
+        assert_eq!(v, vec![(0,1),(1,2),(3,4),(2,3),(4,5)]);
         assert_eq!(index, vec![0,1,3,2,4]);
     }
 }
