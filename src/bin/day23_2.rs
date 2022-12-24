@@ -35,14 +35,6 @@ fn main() {
 //     }
 // }
 
-fn get_bounding_area(hs: &HashSet<Position>) -> i32 {
-    let min_pos = hs.iter().copied().reduce(|acc, p| Position{x:acc.x.min(p.x),y:acc.y.min(p.y)}).unwrap();
-    let max_pos = hs.iter().copied().reduce(|acc, p| Position{x:acc.x.max(p.x),y:acc.y.max(p.y)}).unwrap();
-    let width = max_pos.x - min_pos.x + 1;
-    let height = max_pos.y - min_pos.y + 1;
-    width * height
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Position {
     x: i32,

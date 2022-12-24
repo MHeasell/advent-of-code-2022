@@ -66,6 +66,7 @@ fn create_cube_from_input(grid: &Grid<TerrainType>) -> Cube {
     }
 }
 
+#[allow(dead_code)]
 fn create_cube_from_sample_input(grid: &Grid<TerrainType>) -> Cube {
     let face0 = grid.extract(FACE_SIZE*2, 0,           FACE_SIZE, FACE_SIZE);
     let face1 = grid.extract(0,           FACE_SIZE,   FACE_SIZE, FACE_SIZE);
@@ -395,6 +396,7 @@ struct Grid<T: Clone + Default> {
     vec: Vec<T>,
 }
 
+#[allow(dead_code)]
 impl<T: Copy + Default> Grid<T> {
     fn new(width: usize, height: usize, val: T) -> Self {
         let v = vec![val; width*height];

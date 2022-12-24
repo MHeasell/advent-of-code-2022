@@ -233,6 +233,7 @@ struct Grid<T: Clone> {
     vec: Vec<T>,
 }
 
+#[allow(dead_code)]
 impl<T: Clone> Grid<T> {
     fn new(width: usize, height: usize, val: T) -> Self {
         let v = vec![val; width*height];
